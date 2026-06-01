@@ -1,5 +1,6 @@
 FROM php:8.3-apache
 
+# Dependencias base
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -8,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     && docker-php-ext-install pdo pdo_mysql zip
 
-# Instalar Node.js
+# Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs
 
@@ -19,17 +20,20 @@ WORKDIR /var/www/html
 
 COPY . .
 
-# Dependencias PHP
+# Laravel deps
 RUN composer install --no-dev --optimize-autoloader
 
-# Dependencias frontend y compilación Vite
+# 🔥 IMPORTANTE: limpiar node_modules antes de instalar
+RUN rm -rf node_modules package-lock.json
+
+# Frontend deps + build
 RUN npm install
 RUN npm run build
 
 # Permisos Laravel
 RUN chown -R www-data:www-data storage bootstrap/cache
 
-# Apache
+# Apache rewrite
 RUN a2enmod rewrite
 
 COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
