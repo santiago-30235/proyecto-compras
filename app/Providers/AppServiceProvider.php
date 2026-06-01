@@ -2,12 +2,19 @@
 
 namespace App\Providers;
 
+// =========================
+// Importamos Paginator
+// para usar Bootstrap
+// en la paginación Laravel
+// =========================
+use Illuminate\Pagination\Paginator;
+
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
     /**
-     * Register any application services.
+     * Registrar servicios
      */
     public function register(): void
     {
@@ -15,10 +22,15 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Bootstrap any application services.
+     * Configuración al iniciar Laravel
      */
     public function boot(): void
     {
-        //
+        // =========================
+        // Hace que la paginación
+        // use estilos Bootstrap
+        // y no Tailwind
+        // =========================
+        Paginator::useBootstrap();
     }
 }
