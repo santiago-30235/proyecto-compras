@@ -2,11 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\MetodopagoRequest; // 👈 Importa el Request
+use Illuminate\Http\Request;
 use App\Models\Metodopago;
-use Exception;
-use Illuminate\Database\QueryException;
-use Illuminate\Support\Facades\Log;
 
 class MetodopagoController extends Controller
 {
@@ -26,12 +23,17 @@ class MetodopagoController extends Controller
         return view('metodopagos.create');
     }
 
-    public function store(MetodopagoRequest $request) // 👈 Usa MetodopagoRequest
+    public function store(Request $request)
     {
+        $request->validate([
+            'nombre'      => 'required|string|max:255|unique:metodopagos,nombre',
+            'descripcion' => 'nullable|string',
+        ]);
+
         Metodopago::create([
             'nombre'       => $request->nombre,
             'descripcion'  => $request->descripcion,
-            'estado'       => $request->estado,
+            'estado'       => 1,
             'registradopor'=> auth()->user()->name,
         ]);
 
@@ -49,15 +51,31 @@ class MetodopagoController extends Controller
         return view('metodopagos.edit', compact('metodopago'));
     }
 
-    public function update(MetodopagoRequest $request, Metodopago $metodopago) 
+    public function update(Request $request, Metodopago $metodopago)
     {
-        $metodopago->update([
-            'nombre'      => $request->nombre,
-            'descripcion' => $request->descripcion,
-        ]);
+        try {
+            if ($request->has('nombre')) {
+                // Validar que el nombre no exista en otro registro
+                $existing = Metodopago::where('nombre', $request->nombre)
+                                     ->where('id', '!=', $metodopago->id)
+                                     ->first();
+                if ($existing) {
+                    return back()->with('error', 'Este nombre de método de pago ya está registrado.');
+                }
+                $metodopago->nombre = $request->nombre;
+            }
+            if ($request->has('descripcion')) {
+                $metodopago->descripcion = $request->descripcion;
+            }
 
-        return redirect()->route('metodopagos.index')
-                         ->with('success', 'Método de pago actualizado correctamente.');
+            $metodopago->save();
+
+            return redirect()->route('metodopagos.index')
+                             ->with('success', 'Método de pago actualizado correctamente.');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al actualizar el método de pago: ' . $e->getMessage());
+        }
     }
 
     public function destroy($id)

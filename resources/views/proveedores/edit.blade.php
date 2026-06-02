@@ -69,7 +69,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <input type="hidden" class="form-control" name="registradopor" value="{{ Auth::user()->name }}">
+                                <input type="hidden" name="registradopor" value="{{ Auth::user()->name }}">
                             </div>
                             <div class="card-footer">
                                 <div class="row">

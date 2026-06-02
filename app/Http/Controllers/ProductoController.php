@@ -2,12 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ProductoRequest; // 👈 Importa el Request
+use Illuminate\Http\Request;
 use App\Models\Producto;
 use Illuminate\Support\Facades\File;
-use Exception;
-use Illuminate\Database\QueryException;
-use Illuminate\Support\Facades\Log;
 
 class ProductoController extends Controller
 {
@@ -27,8 +24,16 @@ class ProductoController extends Controller
         return view('productos.create');
     }
 
-    public function store(ProductoRequest $request) // 👈 Usa ProductoRequest
+    public function store(Request $request)
     {
+        $request->validate([
+            'nombre'        => 'required|string|max:255',
+            'precio_compra' => 'required|numeric|min:0',
+            'descripcion'   => 'nullable|string',
+            'stockmaximo'   => 'required|integer|min:0',
+            'imagen'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ]);
+
         $imagenNombre = 'sin-imagen.png';
         if ($request->hasFile('imagen')) {
             $archivo = $request->file('imagen');
@@ -61,32 +66,46 @@ class ProductoController extends Controller
         return view('productos.edit', compact('producto'));
     }
 
-    public function update(ProductoRequest $request, Producto $producto) // 👈 Usa ProductoRequest
+    public function update(Request $request, Producto $producto)
     {
-        $imagenNombre = $producto->imagen;
-        if ($request->hasFile('imagen')) {
-            if ($imagenNombre !== 'sin-imagen.png') {
-                $rutaAnterior = public_path('imagen/productos/' . $imagenNombre);
-                if (File::exists($rutaAnterior)) {
-                    File::delete($rutaAnterior);
-                }
+        try {
+            if ($request->has('nombre')) {
+                $producto->nombre = $request->nombre;
             }
-            $archivo = $request->file('imagen');
-            $imagenNombre = time() . '_' . $archivo->getClientOriginalName();
-            $archivo->move(public_path('imagen/productos'), $imagenNombre);
+            if ($request->has('precio_compra')) {
+                $producto->preciocompra = $request->precio_compra;
+            }
+            if ($request->has('descripcion')) {
+                $producto->descripcion = $request->descripcion;
+            }
+            if ($request->has('stockmaximo')) {
+                $producto->stockmaximo = $request->stockmaximo;
+                $producto->stock = $request->stockmaximo; // Actualiza stock también
+            }
+
+            // Manejo de imagen
+            if ($request->hasFile('imagen')) {
+                // Eliminar imagen anterior si no es la por defecto
+                if ($producto->imagen && $producto->imagen !== 'sin-imagen.png') {
+                    $rutaAnterior = public_path($producto->imagen);
+                    if (File::exists($rutaAnterior)) {
+                        File::delete($rutaAnterior);
+                    }
+                }
+                $archivo = $request->file('imagen');
+                $imagenNombre = time() . '_' . $archivo->getClientOriginalName();
+                $archivo->move(public_path('imagen/productos'), $imagenNombre);
+                $producto->imagen = 'imagen/productos/' . $imagenNombre;
+            }
+
+            $producto->save();
+
+            return redirect()->route('productos.index')
+                             ->with('success', 'Producto actualizado correctamente.');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al actualizar el producto: ' . $e->getMessage());
         }
-
-        $producto->update([
-            'nombre'        => $request->nombre,
-            'preciocompra'  => $request->precio_compra,
-            'descripcion'   => $request->descripcion,
-            'stockmaximo'   => $request->stockmaximo,
-            'stock'         => $request->stockmaximo,
-            'imagen'        => 'imagen/productos/' . $imagenNombre,
-        ]);
-
-        return redirect()->route('productos.index')
-                         ->with('success', 'Producto actualizado correctamente.');
     }
 
     public function destroy($id)
@@ -97,6 +116,7 @@ class ProductoController extends Controller
             return redirect()->route('productos.index')->with('error', 'Producto no encontrado.');
         }
         
+        // Verificar si tiene detalles de compra asociados
         $totalDetalles = \DB::table('detallescompras')->where('producto_id', $id)->count();
         
         if ($totalDetalles > 0) {
@@ -104,6 +124,7 @@ class ProductoController extends Controller
                             ->with('error', "El producto tiene $totalDetalles detalles de compra asociados. No se puede eliminar.");
         }
         
+        // Eliminar imagen si no es la por defecto
         if ($producto->imagen && $producto->imagen !== 'sin-imagen.png') {
             $ruta = public_path($producto->imagen);
             if (file_exists($ruta)) {

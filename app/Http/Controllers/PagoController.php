@@ -2,13 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\PagoRequest; // 👈 Importa el Request
+use Illuminate\Http\Request;
 use App\Models\Pago;
 use App\Models\Ordencompra;
 use App\Models\Metodopago;
-use Exception;
-use Illuminate\Database\QueryException;
-use Illuminate\Support\Facades\Log;
 
 class PagoController extends Controller
 {
@@ -39,8 +36,15 @@ class PagoController extends Controller
         return view('pagos.create', compact('ordencompras', 'metodopagos'));
     }
 
-    public function store(PagoRequest $request) // 👈 Usa PagoRequest
+    public function store(Request $request)
     {
+        $request->validate([
+            'ordencompra_id' => 'required|exists:ordencompras,id',
+            'metodopago_id'  => 'required|exists:metodopagos,id',
+            'fechapago'      => 'required|date',
+            'monto'          => 'required|numeric|min:0',
+        ]);
+
         Pago::create([
             'ordencompra_id' => $request->ordencompra_id,
             'metodopago_id'  => $request->metodopago_id,
@@ -56,14 +60,12 @@ class PagoController extends Controller
     public function show(Pago $pago)
     {
         $pago->load('ordencompra', 'metodopago');
-
         return view('pagos.show', compact('pago'));
     }
 
     public function edit(Pago $pago)
     {
         $ordencompras = Ordencompra::orderBy('id', 'desc')->get();
-
         $metodopagos  = Metodopago::where('estado', '1')
                                    ->orderBy('nombre')
                                    ->get();
@@ -71,8 +73,17 @@ class PagoController extends Controller
         return view('pagos.edit', compact('pago', 'ordencompras', 'metodopagos'));
     }
 
-    public function update(PagoRequest $request, Pago $pago) // 👈 Usa PagoRequest
+    public function update(Request $request, Pago $pago)
     {
+        // Validación
+        $request->validate([
+            'ordencompra_id' => 'required|exists:ordencompras,id',
+            'metodopago_id'  => 'required|exists:metodopagos,id',
+            'fechapago'      => 'required|date',
+            'monto'          => 'required|numeric|min:0',
+        ]);
+
+        // Actualización directa y segura
         $pago->update([
             'ordencompra_id' => $request->ordencompra_id,
             'metodopago_id'  => $request->metodopago_id,
@@ -80,6 +91,7 @@ class PagoController extends Controller
             'monto'          => $request->monto,
         ]);
 
+        // Redirección forzada al índice
         return redirect()->route('pagos.index')
                          ->with('success', 'Pago actualizado correctamente.');
     }

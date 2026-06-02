@@ -26,7 +26,7 @@
                                     <div class="col-lg-6 col-sm-6 col-md-6 col-xs-12">
                                         <div class="form-group label-floating">
                                             <label class="control-label">Nombre <strong style="color:red;">(*)</strong></label>
-                                            <input type="text" class="form-control" name="nombre" placeholder="Nombre del método de pago" autocomplete="off" value="{{ old('nombre', $metodopago->nombre) }}">
+                                            <input type="text" class="form-control" name="nombre" placeholder="Nombre del método" autocomplete="off" value="{{ old('nombre', $metodopago->nombre) }}">
                                             @error('nombre')
                                                 <span class="text-danger small">{{ $message }}</span>
                                             @enderror

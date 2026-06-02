@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ProveedorRequest; // 👈 Importa el Request
+use Illuminate\Http\Request; // 👈 Usamos Request normal
 use App\Models\Proveedor;
 use App\Models\Ordencompra;
 use Exception;
@@ -27,8 +27,16 @@ class ProveedorController extends Controller
         return view('proveedores.create');
     }
 
-    public function store(ProveedorRequest $request) // 👈 Usa ProveedorRequest
+    public function store(Request $request)
     {
+        $request->validate([
+            'nombre'    => 'required|string|max:255',
+            'documento' => 'required|string|max:50',
+            'direccion' => 'nullable|string|max:255',
+            'telefono'  => 'required|string|max:20',
+            'email'     => 'required|email|unique:proveedores,email',
+        ]);
+
         Proveedor::create([
             'nombre'        => $request->nombre,
             'documento'     => $request->documento,
@@ -54,19 +62,39 @@ class ProveedorController extends Controller
         return view('proveedores.edit', compact('proveedor'));
     }
 
-    public function update(ProveedorRequest $request, Proveedor $proveedor) // 👈 Usa ProveedorRequest
+    public function update(Request $request, Proveedor $proveedor)
     {
-        $proveedor->update([
-            'nombre'    => $request->nombre,
-            'documento' => $request->documento,
-            'direccion' => $request->direccion,
-            'telefono'  => $request->telefono,
-            'email'     => $request->email,
-            'estado'    => $request->estado,
-        ]);
+        try {
+            if ($request->has('nombre')) {
+                $proveedor->nombre = $request->nombre;
+            }
+            if ($request->has('documento')) {
+                $proveedor->documento = $request->documento;
+            }
+            if ($request->has('telefono')) {
+                $proveedor->telefono = $request->telefono;
+            }
+            if ($request->has('email')) {
+                $existing = Proveedor::where('email', $request->email)
+                                     ->where('id', '!=', $proveedor->id)
+                                     ->first();
+                if ($existing) {
+                    return back()->with('error', 'El email ya está registrado por otro proveedor.');
+                }
+                $proveedor->email = $request->email;
+            }
+            if ($request->has('direccion')) {
+                $proveedor->direccion = $request->direccion;
+            }
 
-        return redirect()->route('proveedores.index')
-                         ->with('success', 'Proveedor actualizado correctamente.');
+            $proveedor->save();
+
+            return redirect()->route('proveedores.index')
+                             ->with('success', 'Proveedor actualizado correctamente.');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al actualizar el proveedor: ' . $e->getMessage());
+        }
     }
 
     public function destroy($id)

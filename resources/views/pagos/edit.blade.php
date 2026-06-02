@@ -56,7 +56,7 @@
                                     <div class="col-lg-6 col-sm-6 col-md-6 col-xs-12">
                                         <div class="form-group label-floating">
                                             <label class="control-label">Fecha de Pago <strong style="color:red;">(*)</strong></label>
-                                            <input type="date" class="form-control" name="fechapago" value="{{ old('fechapago', $pago->fechapago) }}">
+                                            <input type="date" class="form-control" name="fechapago" value="{{ old('fechapago', \Carbon\Carbon::parse($pago->fechapago)->format('Y-m-d')) }}">
                                             @error('fechapago')
                                                 <span class="text-danger small">{{ $message }}</span>
                                             @enderror
@@ -65,7 +65,7 @@
                                     <div class="col-lg-6 col-sm-6 col-md-6 col-xs-12">
                                         <div class="form-group label-floating">
                                             <label class="control-label">Monto <strong style="color:red;">(*)</strong></label>
-                                            <input type="number" step="0.01" class="form-control" name="monto" placeholder="Monto" value="{{ old('monto', $pago->monto) }}">
+                                            <input type="number" step="0.01" class="form-control" name="monto" value="{{ old('monto', $pago->monto) }}">
                                             @error('monto')
                                                 <span class="text-danger small">{{ $message }}</span>
                                             @enderror
